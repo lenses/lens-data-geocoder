@@ -142,7 +142,7 @@ A data transform component that retrieves the latitude and longitude coordinates
       inputChanged:function(){
         var self = this;
         console.log('geocoder input changed');
-        self.fire('th-input-changed', self);
+        self.fire('lens-input-changed', self);
         console.log('clear output');
         self.setupOutput();
         self.errors=[];
@@ -278,7 +278,6 @@ A data transform component that retrieves the latitude and longitude coordinates
       _addGeocodeToOutput: function(location, outputItem){
         var self = this;
         self.geocoder.geocode({'address': location}, function(results, status){
-           // var firebaseItem = {'input': location};
            
            if (status == google.maps.GeocoderStatus.OK) {
               var lat = results[0].geometry.location.k,
@@ -289,6 +288,9 @@ A data transform component that retrieves the latitude and longitude coordinates
 
               // Trigger change observer for deep changes in output.
               self.output = self.output.map(function(item){return item;});
+
+              // Event used by lens-data-geocoder-firebase to each geocoder in Firebase
+              self.fire('lens-new-geocode', {'input': location, 'latitude': lat, 'longitude': lng});
            } else {
 
              console.log("Geocode for "+ location +" was not successful for the following reason: " + status);
@@ -301,12 +303,12 @@ A data transform component that retrieves the latitude and longitude coordinates
               var errors= {location: location, reason: status};
                 outputItem.latitude = "";
                 outputItem.longitude = "";
-                
                 self.errors.push(errors);
-             }
-             
-           }
 
+                // Event used by lens-data-geocoder-firebase to each geocoder in Firebase
+                self.fire('lens-new-geocode', {'input': location, 'latitude': '', 'longitude': '', 'errors': errors});
+             }
+           }
         });
       },
       /**
@@ -334,7 +336,7 @@ A data transform component that retrieves the latitude and longitude coordinates
               // add to output. Key is "label"
               self.output = self.output.map(function(item){return item;});
            } else {
-             // console.log("Geocode for "+ latlng +" was not successful for the following reason: " + status);
+             console.log("Geocode for "+ latlng +" was not successful for the following reason: " + status);
              
              if(status == "OVER_QUERY_LIMIT"){
               setTimeout(function(){
@@ -351,7 +353,7 @@ A data transform component that retrieves the latitude and longitude coordinates
         var self = this;
         // When output is ready, fire event for other components to use
         if (self.output.length + self.errors.length === self.inputLength){
-          self.fire('th-output-ready', self.output)
+          self.fire('lens-output-ready', self.output)
         }
        
       },
@@ -362,9 +364,6 @@ A data transform component that retrieves the latitude and longitude coordinates
       }
       // TODO
       // - update addLocationToOutput method
-      // - update the ui for selection
-      // - review logic and refactor
-      // - return results for array of strings without chopping up each string
     });
 
   </script>
