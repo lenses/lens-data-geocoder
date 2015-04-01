@@ -1,22 +1,22 @@
 <link rel="import" href="../polymer/polymer.html">
-<link rel="import" href="../th-animated/th-animated.html">
 <link rel="import" href="../core-selector/core-selector.html">
 <link rel="import" href="../core-collapse/core-collapse.html">
 <link rel="import" href="../core-icon-button/core-icon-button.html">
 <link rel="import" href="../google-apis/google-maps-api.html">
+
 <!--
-The lens-data-geocoder retrieves the latitude and longitude coordinates of a location or set of locations. It also can retrieve the location name, given a set or multple sets of coordinates.
+A data transform component that retrieves the latitude and longitude coordinates of a location or set of locations. It also can retrieve the location name, given a set or multple sets of coordinates.
 
 ##### Example
 
     <lens-data-geocoder></lens-data-geocoder>
 
 @element lens-data-geocoder
-@blurb The lens-data-geocoder retrieves the latitude and longitude coordinates of a location or set of locations. It also can retrieve the location name, given a set or multple sets of coordinates.
+@blurb A data transform component that retrieves the latitude and longitude coordinates of a location or set of locations. It also can retrieve the location name, given a set or multple sets of coordinates.
 @status alpha
-@homepage http://thelmanews.github.io/lens-data-geocoder
+@homepage http://lenses.github.io/lens-data-geocoder
 -->
-<polymer-element name="lens-data-geocoder" extends="th-animated" attributes="input reverseGeocode output selectedLabel">
+<polymer-element name="lens-data-geocoder" attributes="input reverseGeocode output selectedLabel">
 
   <template>
     <style>
@@ -45,41 +45,88 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
         padding: 2px;
       }
     </style>
-    <!-- Load Google Maps API -->
-    <google-maps-api on-api-load="{{apiReady}}"></google-maps-api>
-    
-    <!-- Menu for selecting input --> 
-    <core-icon-button icon="perm-data-setting" on-click="{{showControls}}"></core-icon-button>
-    <core-collapse id="ctrl_collapse">      
-      <label for="label_selector">Select label column: </label> 
-      <core-selector id="label_selector" selected="{{selectedLabel}}" valueattr="label">
-        <template repeat="{{attr in _dataAttributes}}">
-          <div label="{{attr}}" on-click="{{selectionChanged}}">{{attr}}</div>
+
+    <div class="lens-container lens-data">
+      <!-- Load Google Maps API -->
+      <google-maps-api on-api-load="{{apiReady}}"></google-maps-api>
+      
+        <label for="label_selector">Select label column: </label> 
+        <core-selector id="label_selector" selected="{{selectedLabel}}" valueattr="label">
+          <template repeat="{{attr in _dataAttributes}}">
+            <div label="{{attr}}" on-click="{{selectionChanged}}">{{attr}}</div>
+          </template>
+        </core-selector>
+      
+      <template bind if="{{ errors.length > 0 }}">
+        <p>{{errors.length}} location(s) NOT found:</p>
+        <template repeat="{{error in errors}}">
+          <li>Location: {{error.location}}, reason: {{error.reason}}</li>
         </template>
-      </core-selector>
-    </core-collapse>
-    
-    <p>{{errors.length}} location(s) NOT found:</p>
-    <template repeat="{{error in errors}}">
-      <li>Location: {{error.location}}, reason: {{error.reason}}</li>
-    </template>
+      </template>
+
+    </div>
 
   </template>
 
   <script>
 
     Polymer({
-      // input: [{'address1':'1501 Lexington Avenue, New York, NY 10029', 'address2':'Columbus Circle, New York, NY'}, {'address1':'54 West 40th Street, New York, NY 10018', 'address2':'Brooklyn Bridge Park, New York, NY'}], // array of objects
       /**
-       * 'reverseGeocode' is set to true when input is a set of lat/lng coordinates that need to be converted to a location
-       * @type {Boolean}
+       *  Array of objects. Examples: <br/><br/>
+       *  <code>['paris, texas', 'toledo, ohio', 'new york, ny']</code><br/>
+       *  <br/>
+       *  <code>[{'addr':'San Francisco, CA'}, {'addr':'Tokyo, Japan'}]</code>
+       *  <br/><br/>
+       *  <code>[{"name": "loc1", "latlng": "35.7090259, 139.73199249999993"},
+       *  {"name": "loc2", "latlng": "40.7017076, -73.99701829999998"}];</code>
+       *  
+       *  @property input
+       *  @type Array
+       *  @default [ ]
+       */
+      input: [],
+
+      /**
+       *  Array of output objects.
+       *  
+       *  @property output
+       *  @type Array
+       *  @default [ ]
+       */
+      output: [],
+
+      /**
+       *  'reverseGeocode' is set to true when input is a set of lat/lng
+       *  coordinates that need to be converted to a location
+       *  
+       *  @property reverseGeocode
+       *  @type Boolean
+       *  @default false
        */
       reverseGeocode: false,
+
       /**
-       * 'errors' is initialized as an empty array and will collect any errors that occur with the Geocode API
-       * @type {Array}
+       * 'errors' is initialized as an empty array and will collect any
+       * errors that occur with the Geocode API
+       * [@private]
+       * [@type] Array
        */
       errors: [],
+
+      /**
+       *  Label of the column to be geocoded.
+       *  
+       *  @property selectedLabel
+       *  @type String
+       *  @default null
+       */
+      selectedLabel: null,
+
+      observe: {
+        selectedLabel: "inputChanged",
+        reverseGeocode: "reverseGeocodeChanged"
+      },
+
       apiReady: function(){
         var self = this;
         self.geocoder = new google.maps.Geocoder(); 
@@ -106,6 +153,10 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
         var self = this;
         console.log('reset output');
         self.output = self.input.map(function(item){
+          // if input was an array of strings, return an object with that string as 'location'
+          if (typeof(item) === 'string') {
+            return {'location': item};
+          }
           var newItem = {};
           var keys = Object.keys(item);
           
@@ -160,11 +211,10 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
                 }
                 // Array of objects
                 else if (typeof(self.input[0]) === 'object'){ 
-
                   self._dataAttributes = Object.keys(self.input[0]);
                   if(self.selectedLabel){
                     self.inputArray = self.input.map(function(obj){return obj[self.selectedLabel]});
-                    console.log(self.inputArray);
+                    break;
                   } else {
                     break;
                   }
@@ -196,10 +246,14 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
 
       },
       getLocations: function(){
-        console.log('get locations');
         var self = this,
-            inputLength = self.inputArray.length,
+            inputLength,
             i = 0;
+        if (!this.inputArray) {
+          return;
+        }
+        inputLength = self.inputArray.length;
+
         if(!self.gettingLocations){
           self.gettingLocations = true;
           var interval = setInterval(function(){
@@ -224,7 +278,7 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
       _addGeocodeToOutput: function(location, outputItem){
         var self = this;
         self.geocoder.geocode({'address': location}, function(results, status){
-           var firebaseItem = {'input': location};
+           // var firebaseItem = {'input': location};
            
            if (status == google.maps.GeocoderStatus.OK) {
               var lat = results[0].geometry.location.k,
@@ -232,11 +286,9 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
               
               outputItem.latitude = lat;
               outputItem.longitude = lng;
-              self.output = self.output.map(function(item){return item;}); // Triggers change observer for deep changes in output.
 
-              firebaseItem.latitude=lat;
-              firebaseItem.longitude=lng;
-              self.firebaseOutput.push(firebaseItem);
+              // Trigger change observer for deep changes in output.
+              self.output = self.output.map(function(item){return item;});
            } else {
 
              console.log("Geocode for "+ location +" was not successful for the following reason: " + status);
@@ -250,11 +302,6 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
                 outputItem.latitude = "";
                 outputItem.longitude = "";
                 
-                firebaseItem.errors = errors;
-                firebaseItem.latitude = "";
-                firebaseItem.longitude = "";
-                
-                self.firebaseOutput.push(firebaseItem);
                 self.errors.push(errors);
              }
              
@@ -270,18 +317,22 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
       // TODO: allow for latlng to be given in different ways, or separately
       _addLocationToOutput: function(latlng, outputItem){
         var self = this;
-        
+        if (typeof(latlng) === 'undefined') {
+          return;
+        }
         var latlngStr = latlng.split(',',2),
             lat = parseFloat(latlngStr[0]),
             lng = parseFloat(latlngStr[1]),
             coordinates = new google.maps.LatLng( lat, lng );
-        
+
         self.geocoder.geocode({'latLng': coordinates}, function(results, status){
            if (status == google.maps.GeocoderStatus.OK) {
               
               var location = results[0].formatted_address;
               outputItem.label = location;
-              
+
+              // add to output. Key is "label"
+              self.output = self.output.map(function(item){return item;});
            } else {
              // console.log("Geocode for "+ latlng +" was not successful for the following reason: " + status);
              
@@ -296,12 +347,6 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
         });
       },
 
-      /**
-       * showControls toggles the menu for choosing the correct field
-       */
-      showControls: function(e) {
-        this.$.ctrl_collapse.toggle();
-      },
       outputChanged: function(){
         var self = this;
         // When output is ready, fire event for other components to use
@@ -309,12 +354,17 @@ The lens-data-geocoder retrieves the latitude and longitude coordinates of a loc
           self.fire('th-output-ready', self.output)
         }
        
+      },
+
+      reverseGeocodeChanged: function() {
+        var self = this;
+        self.geocodeFunc = self.reverseGeocode ? self._addLocationToOutput : self._addGeocodeToOutput;
       }
       // TODO
       // - update addLocationToOutput method
-      // - remove firebase references from this component
-      // - update the ui for selection and errors
+      // - update the ui for selection
       // - review logic and refactor
+      // - return results for array of strings without chopping up each string
     });
 
   </script>
