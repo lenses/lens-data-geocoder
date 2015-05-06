@@ -280,9 +280,11 @@ A data transform component that retrieves the latitude and longitude coordinates
         self.geocoder.geocode({'address': location}, function(results, status){
            
            if (status == google.maps.GeocoderStatus.OK) {
-              var lat = results[0].geometry.location.j,
-                  lng = results[0].geometry.location.C;
-              
+              // The names of the lat/long keys keep changing in the API but usually stay in the same order, so better to not hardcode them.
+              var lngLat = Object.keys(results[0].geometry.location);
+              var lng = results[0].geometry.location[lngLat[0]],
+                  lat = results[0].geometry.location[lngLat[1]];
+
               outputItem.latitude = lat;
               outputItem.longitude = lng;
 
