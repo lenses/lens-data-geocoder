@@ -281,9 +281,9 @@ A data transform component that retrieves the latitude and longitude coordinates
            
            if (status == google.maps.GeocoderStatus.OK) {
               // The names of the lat/long keys keep changing in the API but usually stay in the same order, so better to not hardcode them.
-              var lngLat = Object.keys(results[0].geometry.location);
-              var lng = results[0].geometry.location[lngLat[0]],
-                  lat = results[0].geometry.location[lngLat[1]];
+              var latLng = Object.keys(results[0].geometry.location);
+              var lng = results[0].geometry.location[latLng[1]],
+                  lat = results[0].geometry.location[latLng[0]];
 
               outputItem.latitude = lat;
               outputItem.longitude = lng;
