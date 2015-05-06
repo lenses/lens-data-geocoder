@@ -132,7 +132,7 @@ A data transform component that retrieves the latitude and longitude coordinates
         self.geocoder = new google.maps.Geocoder(); 
         self.geocodeFunc = self.reverseGeocode ? self._addLocationToOutput : self._addGeocodeToOutput;
 
-        if(self.input){
+        if(self.input && self.input.length){
           self.setupOutput();
           self.parseInput();
           self.getLocations();
@@ -280,8 +280,8 @@ A data transform component that retrieves the latitude and longitude coordinates
         self.geocoder.geocode({'address': location}, function(results, status){
            
            if (status == google.maps.GeocoderStatus.OK) {
-              var lat = results[0].geometry.location.k,
-                  lng = results[0].geometry.location.D;
+              var lat = results[0].geometry.location.j,
+                  lng = results[0].geometry.location.C;
               
               outputItem.latitude = lat;
               outputItem.longitude = lng;
